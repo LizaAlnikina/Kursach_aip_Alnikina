@@ -102,7 +102,7 @@ public:
 
     // Дружественные операторы ввода-вывода
     friend ostream& operator<<(ostream& os, const Constructor& obj) {
-        os << "Производитель: " << obj.manufacturer 
+        os << "Производитель: " << obj.manufacturer
            << " | Возраст до: " << obj.ageLimit << " лет"
            << " | Цена: " << obj.price << " руб."
            << " | Деталей: " << obj.partsCount << " шт." << endl;
@@ -122,14 +122,13 @@ public:
     }
 };
 
-// ============================================================================
-// ВЫСОКИЙ УРОВЕНЬ: ДИНАМИЧЕСКИЙ ОДНОСВЯЗНЫЙ СПИСОК (Линейная структура)
-// ============================================================================
+// Структура узла списка
 struct Node {
     Constructor data;
     Node* next;
 };
 
+// Управляющий класс списка
 class ConstructorList {
 private:
     Node* head;
@@ -146,28 +145,32 @@ public:
     int size() const { return currentSize; }
     bool empty() const { return head == nullptr; }
 
-    // Добавление элемента в конец списка
+    // ИЗМЕНЕНО ДЛЯ СРЕДНЕГО УРОВНЯ: упорядоченное добавление по ЦЕНЕ
     void push_back(const Constructor& item) {
         Node* newNode = new Node;
         newNode->data = item;
         newNode->next = nullptr;
 
-        if (head == nullptr) {
+        // Если список пуст или новая цена меньше цены первого элемента
+        if (head == nullptr || item.getPrice() < head->data.getPrice()) {
+            newNode->next = head;
             head = newNode;
-        } else {
-            Node* temp = head;
-            while (temp->next != nullptr) {
-                temp = temp->next;
+        } 
+        // Ищем место внутри списка
+        else {
+            Node* current = head;
+            while (current->next != nullptr && current->next->data.getPrice() <= item.getPrice()) {
+                current = current->next;
             }
-            temp->next = newNode;
+            newNode->next = current->next;
+            current->next = newNode;
         }
         currentSize++;
     }
 
-    // Удаление элемента по ID
+    // Удаление элемента по индексу
     bool removeAt(int idx) {
         if (idx < 0 || idx >= currentSize || head == nullptr) return false;
-
         Node* temp = head;
         if (idx == 0) {
             head = head->next;
@@ -195,7 +198,7 @@ public:
         return &(temp->data);
     }
 
-    // Вывод базы данных в виде красивой таблицы с графлением
+    // Вывод всей таблицы
     void displayAll() const {
         if (head == nullptr) {
             cout << "\n[!] Справочник пуст. База данных не содержит элементов.\n";
@@ -212,7 +215,7 @@ public:
         printFooter();
     }
 
-    // Индивидуальное задание: поиск самого дорогого конструктора
+    // Индивидуальный запрос: поиск самого дорогого конструктора
     void findMostExpensive() const {
         if (head == nullptr) {
             cout << "\n[!] База данных пуста.\n";
@@ -229,7 +232,7 @@ public:
         cout << "\n--- САМЫЙ ДОРОГОЙ КОНСТРУКТОР В БАЗЕ ---\n" << maxNode->data;
     }
 
-    // Фильтрация по возрасту и максимальной стоимости
+    // Индивидуальный запрос: фильтрация по возрасту и цене
     void filterByAgeAndPrice(int age, double maxPrice) const {
         if (head == nullptr) {
             cout << "\n[!] База данных пуста.\n";
@@ -348,32 +351,27 @@ private:
     }
 };
 
-// ============================================================================
-// ЗАЩИТА ОТ ОШИБОК ВВОДА (cin.fail)
-// ============================================================================
+// Функции валидации ввода из твоего КУРСАЧ.txt
 int getValidInt() {
     int val;
-    while (!(cin >> val) || val < 0) {
+    while (!(cin >> val)) {
         cin.clear();
         while (cin.get() != '\n');
-        cout << "[!] Ошибка ввода! Введите целое положительное число: ";
+        cout << "[!] Ошибка ввода! Введите целое число: ";
     }
     return val;
 }
 
 double getValidDouble() {
     double val;
-    while (!(cin >> val) || val < 0) {
+    while (!(cin >> val)) {
         cin.clear();
         while (cin.get() != '\n');
-        cout << "[!] Ошибка ввода! Введите положительное число: ";
+        cout << "[!] Ошибка ввода! Введите число: ";
     }
     return val;
 }
 
-// ============================================================================
-// ГЛАВНЫЙ ИНТЕРФЕЙС
-// ============================================================================
 void showMenu() {
     cout << "\n===== ИНФОРМАЦИОННО-СПРАВОЧНАЯ СИСТЕМА =====\n"
          << "1. Просмотр базы данных (Вывод таблицей)\n"
@@ -389,16 +387,12 @@ void showMenu() {
 }
 
 int main() {
-    // Насильно включаем кодировку UTF-8 для ввода и вывода в консоли Windows
     SetConsoleCP(65001);
     SetConsoleOutputCP(65001);
 
     ConstructorList db("constructors_db.bin");
-    
-    // Подгружаем файл базы, если он существует
     db.loadFromFile();
 
-    // Если база пустая (первый запуск), добавим примеры, чтобы таблица сразу работала
     if (db.empty()) {
         db.push_back(Constructor("Lego", 6, 3500.0, 450));
         db.push_back(Constructor("Bauer", 3, 1200.0, 120));
@@ -416,22 +410,20 @@ int main() {
 
             case 2: {
                 string m; int a, c; double p;
-                cout << "\nВведите имя производителя: ";
-                cin >> m;
+                cout << "\nВведите имя производителя: "; cin >> m;
                 cout << "Введите возрастное ограничение: "; a = getValidInt();
                 cout << "Введите цену: "; p = getValidDouble();
                 cout << "Введите количество деталей: "; c = getValidInt();
-                
                 db.push_back(Constructor(m, a, p, c));
-                cout << "[+] Конструктор успешно добавлен в динамический список!\n";
+                cout << "[+] Конструктор добавлен!\n";
                 break;
             }
 
             case 3: {
                 if (db.empty()) { cout << "\nБаза данных пуста!\n"; break; }
-                cout << "\nВведите ID элемента для удаления (0 - " << db.size() - 1 << "): ";
+                cout << "\nВведите ID для удаления (0 - " << db.size() - 1 << "): ";
                 int id = getValidInt();
-                if (db.removeAt(id)) cout << "[+] Элемент успешно удален из списка!\n";
+                if (db.removeAt(id)) cout << "[+] Удалено!\n";
                 else cout << "[-] Неверный ID!\n";
                 break;
             }
@@ -442,7 +434,6 @@ int main() {
                 int id = getValidInt();
                 Constructor* obj = db.getAt(id);
                 if (obj) {
-                    cout << "\n--- Вызов методов твоего класса ---" << endl;
                     obj->play();
                     obj->unpack();
                     obj->cleanup();
@@ -457,9 +448,9 @@ int main() {
                 Constructor* obj = db.getAt(id);
                 if (obj) {
                     cout << "\n[!] До применения: " << *obj;
-                    (*obj)++; // Твой оператор ++
+                    (*obj)++;
                     cout << "После оператора ++ (Цена +100): " << *obj;
-                    (*obj)--; // Твой оператор --
+                    (*obj)--;
                     cout << "После оператора -- (Цена -100): " << *obj;
                 } else cout << "[-] Неверный ID!\n";
                 break;
@@ -470,10 +461,8 @@ int main() {
                 break;
 
             case 7: {
-                cout << "\nВведите желаемый возраст ребенка: ";
-                int age = getValidInt();
-                cout << "Введите ваш максимальный бюджет (цена): ";
-                double budget = getValidDouble();
+                cout << "\nВведите желаемый возраст ребенка: "; int age = getValidInt();
+                cout << "Введите ваш максимальный бюджет (цена): "; double budget = getValidDouble();
                 db.filterByAgeAndPrice(age, budget);
                 break;
             }
@@ -484,7 +473,7 @@ int main() {
                 break;
 
             default:
-                cout << "\n[!] Неверный пункт меню! Повторите ввод.\n";
+                cout << "\n[!] Неверный выбор!\n";
         }
     } while (choice != 0);
 
